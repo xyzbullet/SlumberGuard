@@ -1,5 +1,5 @@
 const express = require('express');
-const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 // CONFIG
 const PORT = process.env.PORT || 3000;
@@ -49,12 +49,26 @@ client.on('interactionCreate', async (interaction) => {
             return;
         }
 
+        const userTag = interaction.user.tag;
+
         if (state === 'on') {
             slumberGuardChannels.set(interaction.channel.id, true);
-            await interaction.reply({ content: '🛡️ Slumber Guard is now **active** in this channel.', ephemeral: true });
+            const embed = new EmbedBuilder()
+                .setColor(0x00ff99)
+                .setTitle('🛡️ Slumber Guard Activated')
+                .setDescription(`Slumber Guard is now **active** in this channel.`)
+                .setFooter({ text: `Activated by ${userTag}` })
+                .setTimestamp();
+            await interaction.reply({ embeds: [embed] });
         } else {
             slumberGuardChannels.delete(interaction.channel.id);
-            await interaction.reply({ content: '❌ Slumber Guard is now **disabled** in this channel.', ephemeral: true });
+            const embed = new EmbedBuilder()
+                .setColor(0xff4444)
+                .setTitle('❌ Slumber Guard Disabled')
+                .setDescription(`Slumber Guard is now **disabled** in this channel.`)
+                .setFooter({ text: `Disabled by ${userTag}` })
+                .setTimestamp();
+            await interaction.reply({ embeds: [embed] });
         }
     }
 });
