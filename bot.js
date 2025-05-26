@@ -2,8 +2,8 @@ const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder }
 
 // CONFIG
 const SLUMBER_CHECK_INTERVAL = 10000; // 10s
-const TEMPLATE_CHECK_INTERVAL = 60000; // 1min
-const ACTIVITY_THRESHOLD = 5; // messages per minute for slowmode increase
+const TEMPLATE_CHECK_INTERVAL = 60000; // 1 min
+const ACTIVITY_THRESHOLD = 5; // messages per minute
 
 const client = new Client({
     intents: [
@@ -21,20 +21,15 @@ let lastTemplateCache = new Map();
 client.once('ready', () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
 
-    // Start slumber activity check loop
     setInterval(checkSlumberGuard, SLUMBER_CHECK_INTERVAL);
-
-    // Start template check loop
     setInterval(checkTemplates, TEMPLATE_CHECK_INTERVAL);
-
-    // Populate template cache
     populateTemplateCache();
-
-    // Register slash commands
     registerCommands();
 });
 
 client.on('messageCreate', (message) => {
+    if (!message.guild || !message.channel) return;
+
     if (slumberGuardChannels.has(message.channel.id)) {
         let count = messageCounts.get(message.channel.id) || 0;
         messageCounts.set(message.channel.id, count + 1);
@@ -46,6 +41,12 @@ client.on('interactionCreate', async (interaction) => {
 
     if (interaction.commandName === 'slumberguard') {
         const state = interaction.options.getString('state');
+
+        if (!interaction.channel || !interaction.guild) {
+            await interaction.reply({ content: '⚠️ This command must be used in a server text channel.', ephemeral: true });
+            return;
+        }
+
         if (state === 'on') {
             slumberGuardChannels.set(interaction.channel.id, true);
             await interaction.reply({ content: '🛡️ Slumber Guard is now **active** in this channel.', ephemeral: true });
@@ -86,16 +87,19 @@ async function checkTemplates() {
         if (!templates.length) continue;
 
         const template = templates[0];
-        if (template.serializedSourceGuild.name !== lastTemplate.name ||
-            template.serializedSourceGuild.description !== lastTemplate.description) {
-
-            await template.sync().then(() => {
-                console.log(`📦 Synced template for guild: ${guild.name}`);
-                lastTemplateCache.set(guildId, {
-                    name: template.serializedSourceGuild.name,
-                    description: template.serializedSourceGuild.description
-                });
-            }).catch(console.error);
+        if (
+            template.serializedSourceGuild.name !== lastTemplate.name ||
+            template.serializedSourceGuild.description !== lastTemplate.description
+        ) {
+            await template.sync()
+                .then(() => {
+                    console.log(`📦 Synced template for guild: ${guild.name}`);
+                    lastTemplateCache.set(guildId, {
+                        name: template.serializedSourceGuild.name,
+                        description: template.serializedSourceGuild.description
+                    });
+                })
+                .catch(console.error);
         }
     }
 }
@@ -119,17 +123,17 @@ async function registerCommands() {
     const commands = [
         new SlashCommandBuilder()
             .setName('slumberguard')
-            .setDescription('Toggle Slumber Guard for this channel')
+            .setDescription('Toggle Slumber Guard in this channel')
             .addStringOption(option =>
                 option.setName('state')
-                    .setDescription('on or off')
+                    .setDescription('Enable or disable Slumber Guard')
                     .setRequired(true)
                     .addChoices(
                         { name: 'on', value: 'on' },
                         { name: 'off', value: 'off' }
                     )
             )
-    ].map(cmd => cmd.toJSON());
+    ].map(command => command.toJSON());
 
     await rest.put(
         Routes.applicationCommands(client.user.id),
