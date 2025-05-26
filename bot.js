@@ -1,9 +1,11 @@
+const express = require('express');
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
 
 // CONFIG
-const SLUMBER_CHECK_INTERVAL = 10000; // 10s
-const TEMPLATE_CHECK_INTERVAL = 60000; // 1 min
-const ACTIVITY_THRESHOLD = 5; // messages per minute
+const PORT = process.env.PORT || 3000;
+const SLUMBER_CHECK_INTERVAL = 10000;
+const TEMPLATE_CHECK_INTERVAL = 60000;
+const ACTIVITY_THRESHOLD = 5;
 
 const client = new Client({
     intents: [
@@ -142,5 +144,16 @@ async function registerCommands() {
 
     console.log('✅ Slash commands registered');
 }
+
+// Healthcheck Express Server
+const app = express();
+
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
+app.listen(PORT, () => {
+    console.log(`🚀 Healthcheck server running on port ${PORT}`);
+});
 
 client.login(process.env.DISCORD_TOKEN);
