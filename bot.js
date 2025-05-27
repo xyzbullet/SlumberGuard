@@ -1,6 +1,5 @@
 const { Client, GatewayIntentBits, Partials, REST, Routes, SlashCommandBuilder } = require('discord.js');
 const express = require('express');
-require('dotenv').config();
 
 const client = new Client({
     intents: [
